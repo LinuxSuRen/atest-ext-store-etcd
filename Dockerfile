@@ -1,8 +1,5 @@
 FROM golang:1.20 AS builder
 
-LABEL org.opencontainers.image.source=https://github.com/LinuxSuRen/atest-ext-store-s3
-LABEL org.opencontainers.image.description="S3 Store Extension of the API Testing."
-
 ARG VERSION
 ARG GOPROXY
 WORKDIR /workspace
@@ -17,6 +14,10 @@ RUN GOPROXY=${GOPROXY} go mod download
 RUN GOPROXY=${GOPROXY} CGO_ENABLED=0 go build -ldflags "-w -s" -o atest-store-etcd .
 
 FROM alpine:3.12
+
+LABEL org.opencontainers.image.source=https://github.com/LinuxSuRen/atest-ext-store-git
+LABEL org.opencontainers.image.description="Git Store Extension of the API Testing."
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 COPY --from=builder /workspace/atest-store-etcd /usr/local/bin/atest-store-etcd
 
