@@ -3,3 +3,5 @@
 
 # atest-ext-store-etcd
 Etcd Store Extension of [API Testing](https://github.com/LinuxSuRen/api-testing).
+
+All issues of this project could be found at [linuxsuren/api-testing](https://github.com/LinuxSuRen/api-testing/issues).

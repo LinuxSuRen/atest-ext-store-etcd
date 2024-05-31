@@ -17,7 +17,10 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3.0.0
+        uses: actions/checkout@v3.6.0
+        with:
+          fetch-tags: true
+          fetch-depth: 0
       - name: Set output
         id: vars
         run: echo "tag=$(git describe --tags)" >> $GITHUB_OUTPUT
@@ -25,6 +28,11 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: 1.20.x
+      - name: Image Registry Login
+        if: github.ref != 'refs/heads/master'
+        run: |
+          docker login --username linuxsuren --password ${{secrets.DOCKER_HUB_PUBLISH_SECRETS}}
+          docker login ${{ env.REGISTRY }}/linuxsuren --username linuxsuren --password ${{secrets.GH_PUBLISH_SECRETS}}
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2.9.1
         with:
@@ -36,8 +44,9 @@ jobs:
         if: github.ref != 'refs/heads/master'
         run: |
           export TAG=${{ steps.vars.outputs.tag }}
-          oras push ${{ env.REGISTRY_DOCKERHUB }}/linuxsuren/atest-ext-store-etcd:${TAG#v} dist
-          oras push ${{ env.REGISTRY }}/linuxsuren/atest-ext-store-etcd:${TAG#v} dist
+          cd dist
+          oras push ${{ env.REGISTRY_DOCKERHUB }}/linuxsuren/atest-ext-store-etcd:${TAG#v} */*
+          oras push ${{ env.REGISTRY }}/linuxsuren/atest-ext-store-etcd:${TAG#v} */*
 
   image:
     runs-on: ubuntu-20.04
