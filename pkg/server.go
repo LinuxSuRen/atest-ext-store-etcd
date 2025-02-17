@@ -18,6 +18,7 @@ package pkg
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -264,6 +265,41 @@ func (s *remoteserver) PProf(ctx context.Context, in *server.PProfRequest) (data
 	return
 }
 
+func (s *remoteserver) Query(ctx context.Context, query *server.DataQuery) (result *server.DataQueryResult, err error) {
+	var cli SimpleKV
+	cli, err = s.getClient(ctx)
+	if err != nil {
+		return
+	}
+	defer cli.Close()
+
+	// 获取前缀
+	prefix := query.Key
+	if prefix == "" {
+		err = fmt.Errorf("prefix is required")
+		return
+	}
+
+	fmt.Println("start to query from etcd")
+	// 查询包含指定前缀的key values
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	getResp, err := cli.Get(ctxWithTimeout, prefix, clientv3.WithRange("\x00"), clientv3.WithLimit(10))
+	if err != nil {
+		return
+	}
+
+	fmt.Print("recive data from etcd")
+	result = &server.DataQueryResult{}
+	for _, kv := range getResp.Kvs {
+		result.Data = append(result.Data, &server.Pair{
+			Key:   string(kv.Key),
+			Value: string(kv.Value),
+		})
+	}
+	return
+}
+
 func connectTestOption() []clientv3.OpOption {
 	return []clientv3.OpOption{clientv3.WithLimit(1), clientv3.WithPrefix(),
 		clientv3.WithCountOnly(), clientv3.WithKeysOnly()}
@@ -303,6 +339,7 @@ func (s *remoteserver) getClient(ctx context.Context) (cli SimpleKV, err error) 
 	if store == nil {
 		err = errors.New("no connect to etcd server")
 	} else {
+		fmt.Println("connected to", store.URL)
 		cli, err = s.kvFactory.New(clientv3.Config{
 			Endpoints:   []string{store.URL},
 			DialTimeout: 5 * time.Second,
