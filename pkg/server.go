@@ -1,5 +1,5 @@
 /*
-Copyright 2023 API Testing Authors.
+Copyright 2023-2025 API Testing Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -273,15 +273,12 @@ func (s *remoteserver) Query(ctx context.Context, query *server.DataQuery) (resu
 	}
 	defer cli.Close()
 
-	// 获取前缀
 	prefix := query.Key
 	if prefix == "" {
 		err = fmt.Errorf("prefix is required")
 		return
 	}
 
-	fmt.Println("start to query from etcd")
-	// 查询包含指定前缀的key values
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	getResp, err := cli.Get(ctxWithTimeout, prefix, clientv3.WithRange("\x00"), clientv3.WithLimit(10))
@@ -289,7 +286,6 @@ func (s *remoteserver) Query(ctx context.Context, query *server.DataQuery) (resu
 		return
 	}
 
-	fmt.Print("recive data from etcd")
 	result = &server.DataQueryResult{}
 	for _, kv := range getResp.Kvs {
 		result.Data = append(result.Data, &server.Pair{
@@ -339,7 +335,6 @@ func (s *remoteserver) getClient(ctx context.Context) (cli SimpleKV, err error) 
 	if store == nil {
 		err = errors.New("no connect to etcd server")
 	} else {
-		fmt.Println("connected to", store.URL)
 		cli, err = s.kvFactory.New(clientv3.Config{
 			Endpoints:   []string{store.URL},
 			DialTimeout: 5 * time.Second,
