@@ -2,6 +2,8 @@ fmt:
 	go fmt ./...
 build:
 	go build -o bin/atest-store-etcd .
+cp: build
+	install bin/atest-store-etcd ~/.config/atest/bin
 test:
 	go test ./... -cover -v -coverprofile=coverage.out
 	go tool cover -func=coverage.out

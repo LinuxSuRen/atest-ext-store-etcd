@@ -1,5 +1,5 @@
 /*
-Copyright 2023 API Testing Authors.
+Copyright 2023-2025 API Testing Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package pkg
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -260,6 +261,37 @@ func (s *remoteserver) PProf(ctx context.Context, in *server.PProfRequest) (data
 
 	data = &server.PProfData{
 		Data: extension.LoadPProf(in.Name),
+	}
+	return
+}
+
+func (s *remoteserver) Query(ctx context.Context, query *server.DataQuery) (result *server.DataQueryResult, err error) {
+	var cli SimpleKV
+	cli, err = s.getClient(ctx)
+	if err != nil {
+		return
+	}
+	defer cli.Close()
+
+	prefix := query.Key
+	if prefix == "" {
+		err = fmt.Errorf("prefix is required")
+		return
+	}
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	getResp, err := cli.Get(ctxWithTimeout, prefix, clientv3.WithRange("\x00"), clientv3.WithLimit(10))
+	if err != nil {
+		return
+	}
+
+	result = &server.DataQueryResult{}
+	for _, kv := range getResp.Kvs {
+		result.Data = append(result.Data, &server.Pair{
+			Key:   string(kv.Key),
+			Value: string(kv.Value),
+		})
 	}
 	return
 }
